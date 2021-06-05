@@ -103,8 +103,8 @@ def rsync_dest(arch_cfg, arch_dir):
     rsync_path = arch_dir.replace(arch_cfg.rsyncd_path, arch_cfg.rsyncd_module)
     if rsync_path.startswith('/'):
         rsync_path = rsync_path[1:]  # Avoid dup slashes.  TODO use path join?
-    rsync_url = 'rsync://%s@%s:12000/%s' % (
-            arch_cfg.rsyncd_user, arch_cfg.rsyncd_host, rsync_path)
+    rsync_url = '%s@%s::%s' % (
+            arch_cfg.rsyncd_user, arch_cfg.rsyncd_host, arch_cfg.rsyncd_module)
     return rsync_url
 
 # TODO: maybe consolidate with similar code in job.py?
@@ -171,7 +171,7 @@ def archive(dir_cfg, all_jobs):
 
     bwlimit = dir_cfg.archive.rsyncd_bwlimit
     throttle_arg = ('--bwlimit=%d' % bwlimit) if bwlimit else ''
-    cmd = ('rsync %s --compress-level=0 --remove-source-files -P %s %s' %
+    cmd = ('rsync %s --compress-level=0 --remove-source-files --password-file=/etc/rsync.password -P %s %s' %
             (throttle_arg, chosen_plot, rsync_dest(dir_cfg.archive, archdir)))
 
     return (True, cmd)
