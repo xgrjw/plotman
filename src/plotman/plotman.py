@@ -1,16 +1,17 @@
 import argparse
+import datetime
 import importlib
 import importlib.resources
 import os
 import random
 from shutil import copyfile
 import time
+import sys
 
 # Plotman libraries
 from plotman import analyzer, archive, configuration, interactive, manager, plot_util, reporting
 from plotman import resources as plotman_resources
 from plotman.job import Job
-
 
 class PlotmanArgParser:
     def add_idprefix_arg(self, subparser):
@@ -27,10 +28,12 @@ class PlotmanArgParser:
         sp.add_parser('version', help='print the version')
 
         sp.add_parser('status', help='show current plotting status')
- 
+
         sp.add_parser('dirs', help='show directories info')
 
-        sp.add_parser('interactive', help='run interactive control/monitoring mode')
+        p_interactive = sp.add_parser('interactive', help='run interactive control/monitoring mode')
+        p_interactive.add_argument('--autostart-plotting', action='store_true', default=None, dest='autostart_plotting')
+        p_interactive.add_argument('--no-autostart-plotting', action='store_false', default=None, dest='autostart_plotting')
 
         sp.add_parser('dsched', help='print destination dir schedule')
 
@@ -163,14 +166,19 @@ def main():
 
         # Status report
         if args.cmd == 'status':
-            print(reporting.status_report(jobs, get_term_width()))
+            result = "{0}\n\n{1}\n\nUpdated at: {2}".format(
+                reporting.status_report(jobs, get_term_width()),
+                reporting.summary(jobs),
+                datetime.datetime.today().strftime("%c"),
+            )
+            print(result)
 
         # Directories report
         elif args.cmd == 'dirs':
             print(reporting.dirs_report(jobs, cfg.directories, cfg.scheduling, get_term_width()))
 
         elif args.cmd == 'interactive':
-            interactive.run_interactive()
+            interactive.run_interactive(args.autostart_plotting)
 
         # Start running archival
         elif args.cmd == 'archive':
@@ -192,7 +200,7 @@ def main():
         elif args.cmd == 'dsched':
             for (d, ph) in manager.dstdirs_to_furthest_phase(jobs).items():
                 print('  %s : %s' % (d, str(ph)))
-        
+
         #
         # Job control commands
         #
@@ -238,7 +246,7 @@ def main():
                     else:
                         print('killing...')
                         job.cancel()
-                        print('cleaing up temp files...')
+                        print('cleaning up temp files...')
                         for f in temp_files:
                             os.remove(f)
 

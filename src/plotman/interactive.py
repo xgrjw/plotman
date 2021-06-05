@@ -4,7 +4,7 @@ import locale
 import math
 import os
 import subprocess
-
+import sys
 from plotman import archive, configuration, manager, reporting
 from plotman.job import Job
 
@@ -62,14 +62,19 @@ def archiving_status_msg(configured, active, status):
     else:
         return '(not configured)'
 
-def curses_main(stdscr):
+# cmd_autostart_plotting is the (optional) argument passed from the command line. May be None
+def curses_main(stdscr, cmd_autostart_plotting):
     log = Log()
 
     config_path = configuration.get_path()
     config_text = configuration.read_configuration_text(config_path)
     cfg = configuration.get_validated_configs(config_text, config_path)
 
-    plotting_active = True
+    if cmd_autostart_plotting is not None:
+        plotting_active = cmd_autostart_plotting
+    else:
+        plotting_active = cfg.commands.interactive.autostart_plotting
+
     archiving_configured = cfg.directories.archive is not None
     archiving_active = archiving_configured
 
@@ -103,7 +108,7 @@ def curses_main(stdscr):
         if last_refresh is None:
             do_full_refresh = True
         else:
-            elapsed = (datetime.datetime.now() - last_refresh).total_seconds() 
+            elapsed = (datetime.datetime.now() - last_refresh).total_seconds()
             do_full_refresh = elapsed >= cfg.scheduling.polling_time_s
 
         if not do_full_refresh:
@@ -168,7 +173,8 @@ def curses_main(stdscr):
 
         # Directory prefixes, for abbreviation
         tmp_prefix = os.path.commonpath(cfg.directories.tmp)
-        dst_prefix = os.path.commonpath(cfg.directories.dst)
+        dst_dir = cfg.directories.get_dst_directories()
+        dst_prefix = os.path.commonpath(dst_dir)
         if archiving_configured:
             arch_prefix = cfg.directories.archive.rsyncd_path
 
@@ -178,7 +184,7 @@ def curses_main(stdscr):
         tmp_report = reporting.tmp_dir_report(
             jobs, cfg.directories, cfg.scheduling, n_cols, 0, n_tmpdirs, tmp_prefix)
         dst_report = reporting.dst_dir_report(
-            jobs, cfg.directories.dst, n_cols, dst_prefix)
+            jobs, dst_dir, n_cols, dst_prefix)
         if archiving_configured:
             arch_report = reporting.arch_dir_report(archdir_freebytes, n_cols, arch_prefix)
             if not arch_report:
@@ -189,7 +195,7 @@ def curses_main(stdscr):
         #
         # Layout
         #
-            
+
         tmp_h = len(tmp_report.splitlines())
         tmp_w = len(max(tmp_report.splitlines(), key=len)) + 1
         dst_h = len(dst_report.splitlines())
@@ -236,7 +242,7 @@ def curses_main(stdscr):
         header_win.addnstr(' <A>rchival: ', linecap, curses.A_BOLD)
         header_win.addnstr(
                 archiving_status_msg(archiving_configured,
-                    archiving_active, archiving_status), linecap) 
+                    archiving_active, archiving_status), linecap)
 
         # Oneliner progress display
         header_win.addnstr(1, 0, 'Jobs (%d): ' % len(jobs), linecap)
@@ -255,10 +261,10 @@ def curses_main(stdscr):
             header_win.addnstr('  archive=', linecap, curses.A_BOLD)
             header_win.addnstr(arch_prefix, linecap)
         header_win.addnstr(' (remote)', linecap)
-        
+
 
         # Jobs
-        jobs_win.addstr(0, 0, reporting.status_report(jobs, n_cols, jobs_h, 
+        jobs_win.addstr(0, 0, reporting.status_report(jobs, n_cols, jobs_h,
             tmp_prefix, dst_prefix))
         jobs_win.chgat(0, 0, curses.A_REVERSE)
 
@@ -324,14 +330,13 @@ def curses_main(stdscr):
         else:
             pressed_key = key
 
-
-def run_interactive():
+def run_interactive(autostart_plotting = None):
     locale.setlocale(locale.LC_ALL, '')
     code = locale.getpreferredencoding()
     # Then use code as the encoding for str.encode() calls.
 
     try:
-        curses.wrapper(curses_main)
+        curses.wrapper(curses_main, autostart_plotting)
     except curses.error as e:
         raise TerminalTooSmallError(
             "Your terminal may be too small, try making it bigger.",

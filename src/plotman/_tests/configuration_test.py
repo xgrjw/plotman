@@ -18,7 +18,6 @@ def test_get_validated_configs__default(config_text):
     res = configuration.get_validated_configs(config_text, '')
     assert isinstance(res, configuration.PlotmanConfig)
 
-
 def test_get_validated_configs__malformed(config_text):
     """Check that get_validated_configs() raises exception with invalid plotman.yaml contents."""
     loaded_yaml = yaml.load(config_text, Loader=yaml.SafeLoader)
@@ -54,3 +53,33 @@ def test_loads_without_user_interface(config_text):
     reloaded_yaml = configuration.get_validated_configs(stripped_config_text, '')
 
     assert reloaded_yaml.user_interface == configuration.UserInterface()
+
+
+def test_get_dst_directories_gets_dst():
+    tmp = ['/tmp']
+    dst = ['/dst0', '/dst1']
+    directories = configuration.Directories(log='', tmp=tmp, dst=dst)
+
+    assert directories.get_dst_directories() == dst
+
+
+def test_get_dst_directories_gets_tmp():
+    tmp = ['/tmp']
+    directories = configuration.Directories(log='', tmp=tmp)
+
+    assert directories.get_dst_directories() == tmp
+
+
+def test_dst_is_dst():
+    tmp = ['/tmp']
+    dst = ['/dst0', '/dst1']
+    directories = configuration.Directories(log='', tmp=tmp, dst=dst)
+
+    assert not directories.dst_is_tmp()
+
+
+def test_dst_is_tmp():
+    tmp = ['/tmp']
+    directories = configuration.Directories(log='', tmp=tmp)
+
+    assert directories.dst_is_tmp()

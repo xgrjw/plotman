@@ -9,6 +9,13 @@ user_interface:
         # you resize the terminal window, you can try setting this to True. 
         use_stty_size: True
 
+# Optional custom settings for the subcommands (status, interactive etc)
+commands:
+        interactive:
+                # Set it to False if you don't want to auto start plotting when 'interactive' is ran.
+                # You can override this value from the command line, type "plotman interactive -h" for details
+                autostart_plotting: True
+
 # Where to plot and log.
 directories:
         # One directory in which to store all plot job logs (the STDOUT/
@@ -47,10 +54,13 @@ directories:
         # chia plots create as -2.  Only one tmp2 directory is supported.
         # tmp2: /mnt/tmp/a
 
-        # One or more directories; the scheduler will use all of them.
-        # These again are presumed to be on independent physical devices,
-        # so writes (plot jobs) and reads (archivals) can be scheduled
-        # to minimize IO contention.
+        # Optional: A list of one or more directories; the scheduler will
+        # use all of them.  These again are presumed to be on independent
+        # physical devices so writes (plot jobs) and reads (archivals) can
+        # be scheduled to minimize IO contention.
+        # 
+        # If dst is commented out, the tmp directories will be used as the
+        # buffer.
         dst:
                 - /mnt/dst/00
                 - /mnt/dst/01
@@ -123,3 +133,7 @@ plotting:
         # If specified, pass through to the -f and -p options.  See CLI reference.
         #   farmer_pk: ...
         #   pool_pk: ...
+        # If true, Skips adding [final dir] / dst to harvester for farming. 
+        # Especially useful if you have harvesters that are running somewhere else
+        # and you are just plotting on the machine where plotman is running.
+        #   x: True
